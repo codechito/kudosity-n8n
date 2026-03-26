@@ -1,0 +1,53 @@
+{
+  "name": "n8n-nodes-kudosity",
+  "version": "0.1.0",
+  "description": "n8n community node for Kudosity — send SMS, MMS, WhatsApp, and RCS messages via the TransmitMessage API",
+  "keywords": [
+    "n8n-community-node-package",
+    "kudosity",
+    "sms",
+    "mms",
+    "whatsapp",
+    "rcs",
+    "transmitmessage"
+  ],
+  "license": "MIT",
+  "homepage": "https://developers.kudosity.com",
+  "author": {
+    "name": "Kudosity"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kudosity/n8n-nodes-kudosity"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc && gulp build:icons",
+    "dev": "tsc --watch",
+    "format": "prettier nodes credentials --write",
+    "lint": "eslint nodes credentials package.json",
+    "lintfix": "eslint nodes credentials package.json --fix",
+    "prepublishOnly": "npm run build && npm run lint -c .eslintrc.prepublish.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/KudosityApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Kudosity/Kudosity.node.js",
+      "dist/nodes/Kudosity/KudosityTrigger.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^18.16.16",
+    "n8n-workflow": "*",
+    "typescript": "^5.1.3"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}
