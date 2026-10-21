@@ -35,9 +35,12 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
+      "dist/credentials/KudosityV1Api.credentials.js",
       "dist/credentials/KudosityV2Api.credentials.js"
     ],
     "nodes": [
+      "dist/nodes/KudosityV1/KudosityV1.node.js",
+      "dist/nodes/KudosityV1/KudosityV1Trigger.node.js",
       "dist/nodes/KudosityV2/KudosityV2.node.js",
       "dist/nodes/KudosityV2/KudosityV2Trigger.node.js"
     ]
