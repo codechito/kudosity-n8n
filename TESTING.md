@@ -1,0 +1,231 @@
+# First live test — n8n
+
+Everything in this package is unit-tested against fakes and has **never touched the real
+API**. This is the run that finds out what is actually true.
+
+Work top to bottom. Each step says what to record, because several later decisions depend
+on what the earlier steps return.
+
+---
+
+## Before you start
+
+You need:
+
+- SSH access to the n8n server
+- A Kudosity account with credit
+- **A spare virtual number** — see the warning at step 7. Do not use one that feeds
+  Salesforce or Eloqua.
+- A real handset you can send to and reply from
+
+---
+
+## 1. Build and install
+
+On this Mac:
+
+```bash
+cd ~/Developer/kudosity/kudosity-n8n
+npm test            # builds, then runs 41 tests. Must be green before you ship it.
+npm pack            # → n8n-nodes-kudosity-0.1.0.tgz
+scp n8n-nodes-kudosity-0.1.0.tgz you@server:/tmp/
+```
+
+On the n8n server:
+
+```bash
+mkdir -p ~/.n8n/custom
+cd ~/.n8n/custom
+npm init -y                                     # first time only
+npm install /tmp/n8n-nodes-kudosity-0.1.0.tgz
+# restart n8n
+```
+
+If n8n runs in Docker, mount a volume at `/home/node/.n8n/custom` instead, or set
+`N8N_CUSTOM_EXTENSIONS` to a directory and install there.
+
+**Verify:** open n8n, search the node panel for "Kudosity". Four nodes should appear:
+
+- Kudosity V1
+- Kudosity V1 Trigger
+- Kudosity V2
+- Kudosity V2 Trigger
+
+Each should show the Kudosity icon, not a generic placeholder. A missing icon means the
+`copy-icons` build step did not run.
+
+**If nothing appears at all**, n8n did not load the package. Check its startup log for the
+custom-extensions path it is actually reading.
+
+---
+
+## 2. The question that blocks everything else
+
+**Does the v1 API accept the API key with no secret?**
+
+This is first because both integrations are built on an unanswered guess. The n8n V1
+credential and the Make V1 connection both mark the secret optional, pending this.
+
+1. Create a **Kudosity V1 API** credential. Fill in the API Key. **Leave API Secret blank.**
+2. Add a **Kudosity V1** node, operation **Get Account**. Execute it.
+
+This is a read-only call that costs nothing and sends no message.
+
+| Result | Meaning | Do this |
+|---|---|---|
+| Account JSON comes back | Key alone is enough | Record it. The secret can stay optional, and Make can drop it too |
+| 401 or auth error | The secret is required | Fill the secret in, re-run. Then make the field **required** in both n8n and Make |
+
+**Record:** which one, and the exact error text if it failed.
+
+Do not move on until this is settled — every later v1 step depends on the credential
+working.
+
+---
+
+## 3. Read-only v1 operations
+
+Still on the **Kudosity V1** node. These cost nothing, so they are the cheap way to prove
+the request shapes are right before spending credit.
+
+| Operation | Expect |
+|---|---|
+| Get Account | Account details and balance |
+| Get Numbers | Your virtual numbers — **note one you can spare for step 7** |
+| Get Sender IDs | Sender IDs on the account |
+| Format Number | Give it `0412345678` and `AU`; expect international format back |
+
+**Record:** anything that errors, and the full error body. The error shape is itself an
+open question — the Make app guesses at `body.error.message` falling back to
+`body.message`, and a real one settles it.
+
+---
+
+## 4. First v1 send
+
+**Kudosity V1**, operation **Send SMS**. To your own handset.
+
+- **To** — your number
+- **Message** — anything
+- **From** — leave blank first, to confirm the account default works
+
+**Expect:** the message arrives, and the response contains a message ID.
+
+**Record:** the response JSON. The `message_id` field name matters for step 5.
+
+Then try one with **Country Code** set to `AU` and a local-format number like
+`0412345678`, which is the case the Salesforce package handles specially.
+
+---
+
+## 5. v1 lookups against a real message
+
+Using the ID from step 4:
+
+- **Get Delivery Status** — does it return a status?
+- **Cancel SMS** — only meaningful on a scheduled message. Send one with **Send At** set a
+  few minutes ahead, then cancel it and confirm it never arrives.
+
+**Record:** whether `get-delivery-status.json` wants `message_id` or something else. This
+endpoint was taken from the Eloqua integrator, not from documentation.
+
+---
+
+## 6. v2 operations
+
+Create a **Kudosity V2 API** credential — API Key only, no secret.
+
+On a **Kudosity V2** node, run each in turn:
+
+| Operation | Note |
+|---|---|
+| Send SMS | Baseline |
+| Send MMS | Needs a publicly reachable image URL |
+| Send WhatsApp — Text | Only works to a number that has opted in |
+| Send WhatsApp — Template | Needs an approved template name; parameters are comma-separated |
+| Send RCS | Try once with an SMS fallback sender set, once without |
+
+**Record:** the response for each, and any field the API rejects or ignores. The tests pin
+the exact body shape, so anything different means the tests need correcting — tell me what
+came back and I will fix them.
+
+---
+
+## 7. The V1 trigger — read this first
+
+⚠️ **Activating this overwrites the virtual number's forward URL.**
+
+A v1 number has exactly one forward URL. Whatever it points at now stops receiving the
+moment you activate. If that number feeds a Salesforce org or an Eloqua instance, that
+feed breaks silently — nothing warns either side.
+
+**There is no API to read the current value back**, so it cannot be recorded first or
+restored afterwards. Use a number from step 3 that you know is unused.
+
+Then:
+
+1. Add a **Kudosity V1 Trigger**, set **Virtual Number** to the spare one
+2. Activate the workflow
+3. Text that number from your handset
+4. The workflow should fire, with `phone`, `message` and `raw` populated
+5. Deactivate, and confirm **Clear Forward URL on Deactivate** blanked it
+
+**Record:** which field the inbound actually arrives in. The node reads `mobile`, `msisdn`
+and `from` for the sender, and `response` and `message` for the text, because v1 is
+inconsistent. `raw` holds the untouched payload — paste that to me and I will narrow the
+mapping to what is real.
+
+---
+
+## 8. The V2 trigger — the other open question
+
+**Does Kudosity register one webhook per event type, or send everything to one URL?**
+
+The node assumes per-event-type, and so does the Make app. If that is wrong, both need the
+same change.
+
+1. Add a **Kudosity V2 Trigger**, select two event types only — say **SMS Inbound** and
+   **Opt Out**
+2. Activate
+3. In the Kudosity portal, look under **Settings → Webhooks**
+
+**Expect:** two webhook entries named `n8n - SMS Inbound` and `n8n - Opt Out`.
+
+| What you see | Meaning |
+|---|---|
+| Two entries, one per type | The assumption holds. Nothing to change |
+| One entry | `event_type` is being ignored. Both integrations must drop the field and filter after the trigger instead |
+
+4. Send a real inbound and confirm the workflow fires
+5. Deactivate and confirm both webhook entries are removed
+
+**Record:** how many entries appeared, and their names.
+
+---
+
+## What to bring back
+
+Five answers, in rough order of how much they unblock:
+
+1. **Does v1 work without the secret?** (step 2)
+2. **One webhook per event type, or one for everything?** (step 8)
+3. **What a real error body looks like** (step 3 or anywhere that fails)
+4. **The raw v1 inbound payload** (step 7)
+5. **Any response that differs from what the tests expect** (steps 4 and 6)
+
+The first two change both the n8n package and the Make app. The rest are test corrections.
+
+---
+
+## If something is broken
+
+The package is installed from a tarball, so rolling back is removing it:
+
+```bash
+cd ~/.n8n/custom && npm uninstall n8n-nodes-kudosity
+# restart n8n
+```
+
+Nothing is published to npm and nothing else depends on it, so there is no wider blast
+radius. The one action with a side effect outside n8n is step 7 — overwriting a number's
+forward URL.
