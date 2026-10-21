@@ -1,16 +1,24 @@
 {
   "compilerOptions": {
     "strict": true,
+    "skipLibCheck": true,
     "module": "commonjs",
     "target": "ES2019",
-    "lib": ["ES2019"],
+    "lib": [
+      "ES2019"
+    ],
     "outDir": "dist",
     "rootDir": ".",
-    "typeRoots": ["./node_modules/@types"],
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
     "esModuleInterop": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true
   },
-  "exclude": ["dist", "node_modules"]
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
 }
