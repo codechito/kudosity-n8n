@@ -20,23 +20,23 @@ const EVENT_TYPES = [
 	{ name: 'Link Hit',      value: 'LINK_HIT',     key: 'wh_link_hit'     },
 ];
 
-export class KudosityTrigger implements INodeType {
+export class KudosityV2Trigger implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'Kudosity Trigger',
-		name: 'kudosityTrigger',
+		displayName: 'Kudosity V2 Trigger',
+		name: 'kudosityV2Trigger',
 		icon: 'file:kudosity.svg',
 		group: ['trigger'],
 		version: 1,
 		subtitle: '={{$parameter["events"].join(", ")}}',
 		description: 'Triggers when Kudosity events occur: inbound SMS/MMS, delivery status, opt-out, or link click',
 		defaults: {
-			name: 'Kudosity Trigger',
+			name: 'Kudosity V2 Trigger',
 		},
 		inputs: [],
 		outputs: ['main'],
 		credentials: [
 			{
-				name: 'kudosityApi',
+				name: 'kudosityV2Api',
 				required: true,
 			},
 		],
@@ -73,7 +73,7 @@ export class KudosityTrigger implements INodeType {
 			// ── Register one Kudosity webhook per selected event type ─────────────────
 			async create(this: IHookFunctions): Promise<boolean> {
 				const webhookUrl = this.getNodeWebhookUrl('default');
-				const credentials = await this.getCredentials('kudosityApi');
+				const credentials = await this.getCredentials('kudosityV2Api');
 				const apiKey = credentials.apiKey as string;
 				const events = this.getNodeParameter('events') as string[];
 				const webhookData = this.getWorkflowStaticData('node');
@@ -107,7 +107,7 @@ export class KudosityTrigger implements INodeType {
 
 			// ── Delete all registered webhooks for this workflow ──────────────────────
 			async delete(this: IHookFunctions): Promise<boolean> {
-				const credentials = await this.getCredentials('kudosityApi');
+				const credentials = await this.getCredentials('kudosityV2Api');
 				const apiKey = credentials.apiKey as string;
 				const webhookData = this.getWorkflowStaticData('node');
 

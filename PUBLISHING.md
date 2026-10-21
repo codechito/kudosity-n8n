@@ -50,7 +50,7 @@ Then start n8n:
 n8n start
 ```
 
-Open `http://localhost:5678` — search for "Kudosity" in the node panel. Both **Kudosity** and **Kudosity Trigger** should appear.
+Open `http://localhost:5678` — search for "Kudosity V2" in the node panel. Both **Kudosity V2** and **Kudosity V2 Trigger** should appear.
 
 ### Option B — Set the N8N_CUSTOM_EXTENSIONS env variable
 
@@ -63,8 +63,8 @@ N8N_CUSTOM_EXTENSIONS="/home/chito/kudosity-n8n/dist" n8n start
 ## 3. Verify the node works
 
 1. Create a new credential using a real Kudosity API key — the credential test hits `GET /sms?limit=1` and should return a green tick
-2. Add a **Kudosity** node, select **Send SMS**, fill in a real number and sender, and execute — confirm you receive the SMS
-3. Add a **Kudosity Trigger** node, activate the workflow, and check the Kudosity portal under **Settings → Webhooks** that the webhook was registered
+2. Add a **Kudosity V2** node, select **Send SMS**, fill in a real number and sender, and execute — confirm you receive the SMS
+3. Add a **Kudosity V2 Trigger** node, activate the workflow, and check the Kudosity portal under **Settings → Webhooks** that the webhook was registered
 4. Deactivate the workflow and confirm the webhook is removed from the Kudosity portal
 
 ---

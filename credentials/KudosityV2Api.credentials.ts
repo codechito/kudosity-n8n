@@ -5,9 +5,9 @@ import {
 	INodeProperties,
 } from 'n8n-workflow';
 
-export class KudosityApi implements ICredentialType {
-	name = 'kudosityApi';
-	displayName = 'Kudosity API';
+export class KudosityV2Api implements ICredentialType {
+	name = 'kudosityV2Api';
+	displayName = 'Kudosity V2 API';
 	documentationUrl = 'https://developers.kudosity.com';
 	properties: INodeProperties[] = [
 		{

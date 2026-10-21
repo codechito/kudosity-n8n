@@ -26,7 +26,8 @@
     "dev": "tsc --watch",
     "format": "prettier nodes credentials --write",
     "lint": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "test": "npm run build && node --test test/*.test.js"
   },
   "files": [
     "dist"
@@ -34,11 +35,11 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/KudosityApi.credentials.js"
+      "dist/credentials/KudosityV2Api.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/Kudosity/Kudosity.node.js",
-      "dist/nodes/Kudosity/KudosityTrigger.node.js"
+      "dist/nodes/KudosityV2/KudosityV2.node.js",
+      "dist/nodes/KudosityV2/KudosityV2Trigger.node.js"
     ]
   },
   "devDependencies": {

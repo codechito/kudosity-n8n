@@ -8,23 +8,23 @@ import {
 
 const BASE_URL = 'https://api.transmitmessage.com/v2';
 
-export class Kudosity implements INodeType {
+export class KudosityV2 implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'Kudosity',
-		name: 'kudosity',
+		displayName: 'Kudosity V2',
+		name: 'kudosityV2',
 		icon: 'file:kudosity.svg',
 		group: ['output'],
 		version: 1,
 		subtitle: '={{$parameter["operation"]}}',
 		description: 'Send SMS, MMS, WhatsApp, and RCS messages via Kudosity',
 		defaults: {
-			name: 'Kudosity',
+			name: 'Kudosity V2',
 		},
 		inputs: ['main'],
 		outputs: ['main'],
 		credentials: [
 			{
-				name: 'kudosityApi',
+				name: 'kudosityV2Api',
 				required: true,
 			},
 		],
@@ -264,7 +264,7 @@ export class Kudosity implements INodeType {
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
-		const credentials = await this.getCredentials('kudosityApi');
+		const credentials = await this.getCredentials('kudosityV2Api');
 		const apiKey = credentials.apiKey as string;
 
 		const headers = {

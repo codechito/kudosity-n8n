@@ -36,7 +36,7 @@ You will need:
 
 ## Step 2 — Add your API Key to n8n
 
-1. In n8n, open any workflow and add a **Kudosity** node (or **Kudosity Trigger** node)
+1. In n8n, open any workflow and add a **Kudosity V2** node (or **Kudosity V2 Trigger** node)
 2. Click **Create new credential** in the credential dropdown
 3. Paste your API Key into the **API Key** field
 4. Click **Save** — n8n will verify the key automatically
@@ -49,7 +49,7 @@ Your credential is now saved and can be reused across all your Kudosity nodes.
 
 ### Send an SMS
 
-1. Add a **Kudosity** node to your workflow
+1. Add a **Kudosity V2** node to your workflow
 2. Select your saved credential
 3. Set **Operation** to **Send SMS**
 4. Fill in the fields:
@@ -127,9 +127,9 @@ Your credential is now saved and can be reused across all your Kudosity nodes.
 
 ## Step 4 — Receive events (Trigger node)
 
-Use the **Kudosity Trigger** node to start a workflow whenever something happens in Kudosity.
+Use the **Kudosity V2 Trigger** node to start a workflow whenever something happens in Kudosity.
 
-1. Add a **Kudosity Trigger** node as the first node in your workflow
+1. Add a **Kudosity V2 Trigger** node as the first node in your workflow
 2. Select your saved credential
 3. Choose which **Events** to listen for:
 
