@@ -103,6 +103,32 @@ function context(credentials, params) {
 // so the output still shows which scheme was used.
 const SECRET_HEADER = /auth|key|token|secret/i;
 
+// Responses carry credentials too. get-client.json returns the account's apikey and
+// apisecret in its body, so printing a response verbatim leaks them just as surely as
+// printing a header would. Redacting only the request side was not enough.
+const SECRET_FIELD = /^(api_?key|api_?secret|secret|token|password|auth)$/i;
+
+function redactBody(value) {
+    if (Array.isArray(value)) return value.map(redactBody);
+    if (value && typeof value === 'object') {
+        const out = {};
+        for (const [k, v] of Object.entries(value)) {
+            out[k] = SECRET_FIELD.test(k) ? '<redacted>' : redactBody(v);
+        }
+        return out;
+    }
+    return value;
+}
+
+/** Last line of defence: mask any known secret wherever it appears in printed text. */
+function scrub(text) {
+    let out = String(text);
+    for (const v of [process.env.KUDOSITY_V1_KEY, process.env.KUDOSITY_V1_SECRET, process.env.KUDOSITY_V2_KEY]) {
+        if (v && v.length > 3) out = out.split(v).join('<redacted>');
+    }
+    return out;
+}
+
 const redact = (headers = {}) => {
     const out = {};
     for (const [name, value] of Object.entries(headers)) {
@@ -124,19 +150,23 @@ async function run(label, Node, credentials, params) {
     try {
         const out = await Node.prototype.execute.call(ctx);
         const req = ctx.sent[0] || {};
-        console.log(`   ${req.method} ${req.url}`);
+        console.log(scrub(`   ${req.method} ${req.url}`));
         console.log(`   headers  ${JSON.stringify(redact(req.headers))}`);
-        if (req.body) console.log(`   body     ${String(req.body).slice(0, 200)}`);
+        if (req.body) console.log(scrub(`   body     ${String(req.body).slice(0, 200)}`));
         console.log(`   RESULT   OK`);
-        console.log(`   response ${JSON.stringify(out[0][0].json).slice(0, 500)}`);
+        console.log(scrub(`   response ${JSON.stringify(redactBody(out[0][0].json)).slice(0, 500)}`));
         return { ok: true };
     } catch (err) {
         const req = ctx.sent[0] || {};
-        console.log(`   ${req.method || '?'} ${req.url || '?'}`);
+        console.log(scrub(`   ${req.method || '?'} ${req.url || '?'}`));
         console.log(`   headers  ${JSON.stringify(redact(req.headers || {}))}`);
-        if (req.body) console.log(`   body     ${String(req.body).slice(0, 200)}`);
+        if (req.body) console.log(scrub(`   body     ${String(req.body).slice(0, 200)}`));
         console.log(`   RESULT   ${err.statusCode ? 'HTTP ' + err.statusCode : 'FAILED'} — ${err.message}`);
-        if (err.body) console.log(`   ERROR BODY (verbatim, this is what we need):\n     ${String(err.body).slice(0, 800)}`);
+        if (err.body) {
+            let shown = String(err.body);
+            try { shown = JSON.stringify(redactBody(JSON.parse(shown))); } catch { /* not JSON, scrub below */ }
+            console.log(scrub(`   ERROR BODY:\n     ${shown.slice(0, 800)}`));
+        }
         return { ok: false, status: err.statusCode, body: err.body };
     }
 }
@@ -213,7 +243,7 @@ async function main() {
         }
     }
 
-    console.log('\nDone. Header values matching /auth|key|token|secret/ were masked.\n');
+    console.log('\nDone. Credential-looking headers and response fields were masked,\nand any known key or secret is scrubbed from every line.\n');
 }
 
 main().catch((e) => { console.error('live-check failed:', e.message); process.exit(1); });
