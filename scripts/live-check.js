@@ -16,8 +16,11 @@
  * Credentials come from the environment and are never printed. Nothing here sends a
  * message unless you pass --send.
  *
- *   node scripts/live-check.js                 read-only checks
- *   node scripts/live-check.js --send +614...  also sends one real SMS per API
+ *   node scripts/live-check.js                              read-only checks
+ *   node scripts/live-check.js --send 614... --from 614...  also sends one per API
+ *
+ * v1 accepts a blank sender and falls back to the account default. v2 does not, and
+ * returns 400 {"error":"sender: required"}, so --from is needed for the v2 send.
  *
  * Reads KUDOSITY_V1_KEY, KUDOSITY_V1_SECRET (optional), KUDOSITY_V2_KEY.
  */
@@ -45,6 +48,9 @@ const V2 = require(path.join(__dirname, '..', 'dist/nodes/KudosityV2/KudosityV2.
 
 const argv = process.argv.slice(2);
 const sendTo = argv.includes('--send') ? argv[argv.indexOf('--send') + 1] : null;
+// v2 rejects a blank sender with 400 {"error":"sender: required"}, where v1 falls back
+// to the account default. Use --from to supply one; Get Sender IDs lists valid values.
+const sendFrom = argv.includes('--from') ? argv[argv.indexOf('--from') + 1] : '';
 
 // ── A real request helper, shaped like n8n's ─────────────────────────────────
 function request(opts) {
@@ -225,8 +231,10 @@ async function main() {
             { operation: 'formatNumber', msisdn: '0412345678', countrycode: 'AU' });
 
         if (sendTo) {
-            await run(`Send SMS to ${sendTo}`, V1, creds,
-                { operation: 'sendSms', to: sendTo, message: 'Kudosity n8n live check (v1)', from: '', additionalFields: {} });
+            await run(`Send SMS to ${sendTo}${sendFrom ? ' from ' + sendFrom : ' (account default sender)'}`,
+                V1, creds,
+                { operation: 'sendSms', to: sendTo, message: 'Kudosity n8n live check (v1)',
+                  from: sendFrom, additionalFields: {} });
         }
     }
 
@@ -238,8 +246,15 @@ async function main() {
             { operation: 'sendSms', recipient: '+61400000000', sender: '+61400000001', message: 'x' });
 
         if (sendTo) {
-            await run(`Send SMS to ${sendTo}`, V2, { apiKey: v2Key },
-                { operation: 'sendSms', recipient: sendTo, sender: '', message: 'Kudosity n8n live check (v2)' });
+            if (!sendFrom) {
+                console.log('\n── Send SMS (v2) skipped: pass --from <sender> as well.');
+                console.log('   v2 requires a sender and rejects a blank one; v1 does not.');
+                console.log('   Run Get Sender IDs above to see what this account may send as.');
+            } else {
+                await run(`Send SMS to ${sendTo} from ${sendFrom}`, V2, { apiKey: v2Key },
+                    { operation: 'sendSms', recipient: sendTo, sender: sendFrom,
+                      message: 'Kudosity n8n live check (v2)' });
+            }
         }
     }
 
