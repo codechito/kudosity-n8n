@@ -267,8 +267,11 @@ export class KudosityV2 implements INodeType {
 		const credentials = await this.getCredentials('kudosityV2Api');
 		const apiKey = credentials.apiKey as string;
 
+		// x-api-key, not Authorization. Confirmed against the live API: an Authorization
+		// header carrying the same key returns 401 {"status":"Invalid api key"}, while
+		// x-api-key returns 200. This was wrong in every version before 22 Oct 2026.
 		const headers = {
-			Authorization: apiKey,
+			'x-api-key': apiKey,
 			'Content-Type': 'application/json',
 		};
 

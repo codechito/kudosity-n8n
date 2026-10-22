@@ -110,11 +110,15 @@ describe('send operations', () => {
 });
 
 describe('authentication', () => {
-    test('the API key is sent raw, with no Bearer prefix', async () => {
-        // The v2 API rejects "Bearer <key>". This is the single easiest thing to
-        // break by "fixing" it to match conventional OAuth.
+    test('the API key goes in x-api-key, not Authorization', async () => {
+        // Confirmed against the live API on 22 Oct 2026. The same key in an
+        // Authorization header returns 401 {"status":"Invalid api key"}; in x-api-key
+        // it returns 200. Every version before that date had this wrong, and the
+        // earlier version of this test pinned the wrong header in place.
         const { req } = await send({ ...COMMON, operation: 'sendSms', message: 'Hello' });
-        assert.strictEqual(req.headers.Authorization, 'test-api-key');
+        assert.strictEqual(req.headers['x-api-key'], 'test-api-key');
+        assert.strictEqual(req.headers.Authorization, undefined,
+            'an Authorization header must not be sent — the v2 API rejects it');
         assert.strictEqual(req.headers['Content-Type'], 'application/json');
     });
 });
@@ -150,6 +154,7 @@ describe('trigger webhook lifecycle', () => {
         for (const req of ctx.requests) {
             assert.strictEqual(req.method, 'POST');
             assert.strictEqual(req.url, `${BASE}/webhook`);
+            assert.strictEqual(req.headers['x-api-key'], 'test-api-key');
             const body = JSON.parse(req.body);
             assert.strictEqual(body.url, 'https://n8n.test/webhook/abc');
             assert.ok(body.event_type, 'event_type must be set on each registration');

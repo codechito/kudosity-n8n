@@ -96,10 +96,26 @@ function context(credentials, params) {
     };
 }
 
-const redact = (headers) => {
-    const h = { ...headers };
-    if (h.Authorization) h.Authorization = h.Authorization.startsWith('Basic ') ? 'Basic <redacted>' : '<redacted>';
-    return h;
+// Redact by matching the header NAME, not by listing known ones. The first version
+// redacted only `Authorization`; when the v2 node moved to `x-api-key` the key was
+// printed in full while the script still claimed it had printed no credential.
+// Anything that looks like it carries a secret is masked, and the shape is preserved
+// so the output still shows which scheme was used.
+const SECRET_HEADER = /auth|key|token|secret/i;
+
+const redact = (headers = {}) => {
+    const out = {};
+    for (const [name, value] of Object.entries(headers)) {
+        if (!SECRET_HEADER.test(name)) {
+            out[name] = value;
+            continue;
+        }
+        const v = String(value);
+        out[name] = v.startsWith('Basic ') ? 'Basic <redacted>'
+                  : v.startsWith('Bearer ') ? 'Bearer <redacted>'
+                  : '<redacted>';
+    }
+    return out;
 };
 
 async function run(label, Node, credentials, params) {
@@ -197,7 +213,7 @@ async function main() {
         }
     }
 
-    console.log('\nDone. Nothing above printed a credential.\n');
+    console.log('\nDone. Header values matching /auth|key|token|secret/ were masked.\n');
 }
 
 main().catch((e) => { console.error('live-check failed:', e.message); process.exit(1); });

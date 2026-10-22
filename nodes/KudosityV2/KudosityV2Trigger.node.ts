@@ -79,7 +79,7 @@ export class KudosityV2Trigger implements INodeType {
 				const webhookData = this.getWorkflowStaticData('node');
 
 				const headers = {
-					Authorization: apiKey,
+					'x-api-key': apiKey,
 					'Content-Type': 'application/json',
 				};
 
@@ -111,7 +111,7 @@ export class KudosityV2Trigger implements INodeType {
 				const apiKey = credentials.apiKey as string;
 				const webhookData = this.getWorkflowStaticData('node');
 
-				const headers = { Authorization: apiKey };
+				const headers = { 'x-api-key': apiKey };
 
 				for (const eventType of EVENT_TYPES) {
 					const id = webhookData[eventType.key];

@@ -27,7 +27,7 @@ export class KudosityV2Api implements ICredentialType {
 		type: 'generic',
 		properties: {
 			headers: {
-				Authorization: '={{$credentials.apiKey}}',
+				'x-api-key': '={{$credentials.apiKey}}',
 			},
 		},
 	};
