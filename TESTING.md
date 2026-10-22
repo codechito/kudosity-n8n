@@ -20,7 +20,30 @@ You need:
 
 ---
 
-## 1. Build and install
+## 1. Install
+
+**Not** through Settings → Community nodes. That installer only accepts npm package names
+— it runs `npm install` against the npm registry — and this package is not published. It
+will not take a GitHub URL.
+
+Use n8n's custom-extensions directory instead.
+
+### Straight from GitHub — simplest
+
+On the n8n server:
+
+```bash
+mkdir -p ~/.n8n/custom
+cd ~/.n8n/custom
+npm init -y                                  # first time only
+npm install github:codechito/kudosity-n8n
+# restart n8n
+```
+
+The package has a `prepare` script, so npm compiles it after cloning. Nothing to copy and
+nothing to publish. To pick up later changes, push to `main` and re-run the same command.
+
+### From a tarball — if the server cannot reach GitHub
 
 On this Mac:
 
@@ -31,18 +54,17 @@ npm pack            # → n8n-nodes-kudosity-0.1.0.tgz
 scp n8n-nodes-kudosity-0.1.0.tgz you@server:/tmp/
 ```
 
-On the n8n server:
+On the server:
 
 ```bash
-mkdir -p ~/.n8n/custom
-cd ~/.n8n/custom
-npm init -y                                     # first time only
-npm install /tmp/n8n-nodes-kudosity-0.1.0.tgz
-# restart n8n
+cd ~/.n8n/custom && npm install /tmp/n8n-nodes-kudosity-0.1.0.tgz
 ```
 
-If n8n runs in Docker, mount a volume at `/home/node/.n8n/custom` instead, or set
-`N8N_CUSTOM_EXTENSIONS` to a directory and install there.
+### Docker
+
+`~/.n8n` is inside the container. Either exec in and run the same commands against
+`/home/node/.n8n/custom`, or mount a host directory there so installs survive a restart.
+`N8N_CUSTOM_EXTENSIONS` can point somewhere else if you prefer.
 
 **Verify:** open n8n, search the node panel for "Kudosity". Four nodes should appear:
 
