@@ -225,17 +225,47 @@ same change.
 
 ---
 
-## What to bring back
+## Already settled — do not re-run these
 
-Five answers, in rough order of how much they unblock:
+Verified against the sandbox account on 22 Oct 2026 with `scripts/live-check.js`:
 
-1. **Does v1 work without the secret?** (step 2)
-2. **One webhook per event type, or one for everything?** (step 8)
-3. **What a real error body looks like** (step 3 or anywhere that fails)
-4. **The raw v1 inbound payload** (step 7)
-5. **Any response that differs from what the tests expect** (steps 4 and 6)
+- **Credentials.** V1 needs key + secret via Basic. V2 needs the key alone via
+  `x-api-key`. **Same key for both.**
+- **V1 working:** Get Account, Get Numbers, Get Sender IDs, Format Number, Send SMS
+  (default sender, named sender, country-code expansion), scheduled send, Cancel SMS,
+  Get Delivery Status, Get Replies.
+- **V2 working:** Send SMS, with and without `message_ref`.
+- **V1 tolerates a blank sender** and falls back to the account default. **V2 rejects
+  one** with 400 `{"error":"sender: required"}`.
+- **The V1 trigger's whole lifecycle** against the real API: `checkExists` false,
+  `create` registers the forward URL, `checkExists` true, `delete` clears it. Also
+  confirmed there is genuinely no way to read a forward URL back —
+  `get-number-options.json` is 404 and `get-numbers.json` does not return it.
+- **Endpoint names.** `/get-delivery-status.json` is 404 NOT_IMPLEMENTED; the real one
+  is `/get-sms-delivery-status.json`, and it needs `msisdn` as well as `message_id`.
+  Get Replies requires `message_id` — there is no all-recent-replies call.
+- **Six error shapes.** `error` is variously an object with `description`, an object with
+  `detail` and `issues[]`, or a bare string; one response is not JSON at all.
 
-The first two change both the n8n package and the Make app. The rest are test corrections.
+## Still to bring back
+
+1. **One webhook per event type, or one for everything?** (step 8) — changes both the
+   n8n package and the Make app
+2. **The raw v1 inbound payload** (step 7)
+3. **MMS, WhatsApp and RCS** (step 6). MMS needs a URL serving a real image
+   content-type. WhatsApp and RCS returned `invalid sender number` — the virtual
+   numbers are not provisioned for those channels, which is an account question
+4. **Whether a non-auth v1 error matches the auth shape**
+
+### Why the inbound half needs your server
+
+A real inbound cannot be produced on the sandbox account by sending between its two
+virtual numbers. Outbound routes to a fake Kannel gateway, so nothing is delivered and
+no reply is generated — tried, and no `direction: IN` message ever appeared.
+
+Receiving therefore needs **a real handset texting the virtual number**, and a
+**publicly reachable webhook**. Your n8n server has the second; a phone has the first.
+That is why step 7 stays on the list despite everything else being settled.
 
 ---
 
