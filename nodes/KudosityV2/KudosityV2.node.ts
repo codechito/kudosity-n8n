@@ -5,6 +5,7 @@ import {
 	INodeTypeDescription,
 	NodeOperationError,
 } from 'n8n-workflow';
+import { kudosityApiError } from '../shared/errors';
 
 const BASE_URL = 'https://api.transmitmessage.com/v2';
 
@@ -372,15 +373,27 @@ export class KudosityV2 implements INodeType {
 				throw new NodeOperationError(this.getNode(), `Unknown operation: ${operation}`, { itemIndex: i });
 			}
 
-			const response = await this.helpers.request({
-				method: 'POST',
-				url: `${BASE_URL}${endpoint}`,
-				headers,
-				body: JSON.stringify(body),
-			});
+			try {
+				const response = await this.helpers.request({
+					method: 'POST',
+					url: `${BASE_URL}${endpoint}`,
+					headers,
+					body: JSON.stringify(body),
+				});
 
-			const json = typeof response === 'string' ? JSON.parse(response) : response;
-			returnData.push({ json, pairedItem: { item: i } });
+				const json = typeof response === 'string' ? JSON.parse(response) : response;
+				returnData.push({ json, pairedItem: { item: i } });
+			} catch (error) {
+				if (this.continueOnFail()) {
+					const translated = kudosityApiError(this.getNode(), error, 'v2');
+					returnData.push({
+						json: { error: translated.message, description: translated.description },
+						pairedItem: { item: i },
+					});
+					continue;
+				}
+				throw kudosityApiError(this.getNode(), error, 'v2');
+			}
 		}
 
 		return [returnData];

@@ -5,6 +5,7 @@ import type {
 	INodeTypeDescription,
 } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
+import { kudosityApiError } from '../shared/errors';
 
 /**
  * The v1 API, as used in production by the Kudosity Salesforce package.
@@ -295,15 +296,29 @@ export class KudosityV1 implements INodeType {
 			// GET operations carry their parameters in the query string. The Salesforce
 			// package puts them in the body of a GET, which works but is unusual enough
 			// that proxies and HTTP clients sometimes drop it.
-			const response = await this.helpers.request({
-				method,
-				url: method === 'GET' && query ? `${BASE_URL}${endpoint}?${query}` : `${BASE_URL}${endpoint}`,
-				headers,
-				...(method === 'POST' ? { body: query } : {}),
-			});
+			try {
+				const response = await this.helpers.request({
+					method,
+					url: method === 'GET' && query ? `${BASE_URL}${endpoint}?${query}` : `${BASE_URL}${endpoint}`,
+					headers,
+					...(method === 'POST' ? { body: query } : {}),
+				});
 
-			const json = typeof response === 'string' ? JSON.parse(response) : response;
-			returnData.push({ json, pairedItem: { item: i } });
+				const json = typeof response === 'string' ? JSON.parse(response) : response;
+				returnData.push({ json, pairedItem: { item: i } });
+			} catch (error) {
+				// continueOnFail lets a bad row pass through as an item rather than
+				// halting the run — one malformed number should not kill a batch.
+				if (this.continueOnFail()) {
+					const translated = kudosityApiError(this.getNode(), error, 'v1');
+					returnData.push({
+						json: { error: translated.message, description: translated.description },
+						pairedItem: { item: i },
+					});
+					continue;
+				}
+				throw kudosityApiError(this.getNode(), error, 'v1');
+			}
 		}
 
 		return [returnData];
