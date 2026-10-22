@@ -239,3 +239,37 @@ describe('v1 trigger', () => {
         assert.strictEqual(item.json.status, 'delivered');
     });
 });
+
+describe('v1 endpoints that need more than the obvious parameter', () => {
+    // Both pinned from live 400s on 22 Oct 2026. Neither was discoverable from the
+    // Salesforce or Eloqua source these endpoints were copied from.
+    test('Get Delivery Status sends msisdn as well as message_id', async () => {
+        // message_id alone returns 400 FIELD_EMPTY "Field msisdn is required".
+        const { req, form } = await call({
+            operation: 'getDeliveryStatus', messageId: '1783900150', msisdn: '61430251585',
+        });
+        assert.strictEqual(req.method, 'GET');
+        assert.ok(req.url.startsWith(`${BASE}/get-sms-delivery-status.json?`),
+            `wrong endpoint: ${req.url}`);
+        assert.strictEqual(form.message_id, '1783900150');
+        assert.strictEqual(form.msisdn, '61430251585',
+            'msisdn is required by the API, not optional');
+    });
+
+    test('the delivery-status endpoint keeps "sms" in its name', async () => {
+        // /get-delivery-status.json — the name the Eloqua integrator config uses —
+        // returns 404 NOT_IMPLEMENTED. Only /get-sms-delivery-status.json exists.
+        const { req } = await call({
+            operation: 'getDeliveryStatus', messageId: '1', msisdn: '614',
+        });
+        assert.match(req.url, /get-sms-delivery-status\.json/);
+        assert.doesNotMatch(req.url, /\/get-delivery-status\.json/);
+    });
+
+    test('Get Replies always sends message_id', async () => {
+        // Without it: 400 FIELD_INVALID "You must provide 'message_id' or 'keyword_id',
+        // or both 'keyword' and 'number'". There is no all-recent-replies call.
+        const { form } = await call({ operation: 'getSmsResponses', messageId: '1783900150' });
+        assert.strictEqual(form.message_id, '1783900150');
+    });
+});

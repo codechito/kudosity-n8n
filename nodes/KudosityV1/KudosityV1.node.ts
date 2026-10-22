@@ -156,8 +156,19 @@ export class KudosityV1 implements INodeType {
 				name: 'messageId',
 				type: 'string',
 				default: '',
-				description: 'Limit replies to one sent message. Leave blank for all recent replies.',
+				required: true,
+				description: 'Replies to this sent message. The API requires it — there is no "all recent replies" call.',
 				displayOptions: { show: { operation: ['getSmsResponses'] } },
+			},
+
+			{
+				displayName: 'Recipient Number',
+				name: 'msisdn',
+				type: 'string',
+				default: '',
+				required: true,
+				description: 'The number the message was sent to. Required alongside the message ID.',
+				displayOptions: { show: { operation: ['getDeliveryStatus'] } },
 			},
 
 			// ── Format Number ───────────────────────────────────────────────────
@@ -242,8 +253,13 @@ export class KudosityV1 implements INodeType {
 				endpoint = '/cancel-sms.json';
 				form.id = this.getNodeParameter('messageId', i) as string;
 			} else if (operation === 'getDeliveryStatus') {
+				// Both fields are required. message_id alone returns
+				// 400 FIELD_EMPTY "Field msisdn is required". Note the endpoint name:
+				// /get-delivery-status.json (without "sms") is 404 NOT_IMPLEMENTED.
 				endpoint = '/get-sms-delivery-status.json';
+				method = 'GET';
 				form.message_id = this.getNodeParameter('messageId', i) as string;
+				form.msisdn = this.getNodeParameter('msisdn', i) as string;
 			} else if (operation === 'formatNumber') {
 				endpoint = '/format-number.json';
 				method = 'GET';
@@ -263,8 +279,9 @@ export class KudosityV1 implements INodeType {
 				// forward_url already belongs to another system and must not be taken.
 				endpoint = '/get-sms-responses.json';
 				method = 'GET';
-				const messageId = (this.getNodeParameter('messageId', i, '') as string) || '';
-				if (messageId) form.message_id = messageId;
+				// Not optional: without it the API returns 400 FIELD_INVALID
+				// "You must provide 'message_id' or 'keyword_id', or both 'keyword' and 'number'".
+				form.message_id = this.getNodeParameter('messageId', i) as string;
 			} else if (operation === 'setForwardUrl') {
 				endpoint = '/edit-number-options.json';
 				form.number = this.getNodeParameter('number', i) as string;
