@@ -124,77 +124,86 @@ describe('authentication', () => {
 });
 
 describe('trigger webhook lifecycle', () => {
-    // n8n always supplies this — the parameter is required and defaults to
-    // ['SMS_INBOUND'] — so the fake supplies it too rather than testing a state
-    // the editor cannot produce.
+    // Shape confirmed against the live API on 22 Oct 2026. ONE webhook carries every
+    // selected event type in a filter.event_type array; the label field is `name`.
+    // Registering per event type with a `webhook_name` field — what this did before —
+    // is rejected with 400 "unknown field webhook_name", so it had never worked.
     const ALL_EVENTS = ['SMS_INBOUND', 'SMS_STATUS', 'MMS_INBOUND', 'MMS_STATUS',
                         'RCS_STATUS', 'OPT_OUT', 'LINK_HIT'];
 
     function hookContext({ staticData = {}, events = ALL_EVENTS } = {}) {
         const requests = [];
         return {
-            requests,
-            staticData,
+            requests, staticData,
             getWorkflowStaticData: () => staticData,
             getNodeWebhookUrl: () => 'https://n8n.test/webhook/abc',
             getNodeParameter: (name) => (name === 'events' ? events : undefined),
             getCredentials: async () => ({ apiKey: 'test-api-key' }),
             getNode: () => ({ name: 'Kudosity V2 Trigger' }),
-            helpers: { request: async (opts) => { requests.push(opts); return { id: `wh_${requests.length}` }; } },
+            helpers: { request: async (opts) => { requests.push(opts); return { id: 'wh_1' }; } },
         };
     }
 
     const methods = KudosityV2Trigger.prototype.webhookMethods ?? new KudosityV2Trigger().webhookMethods;
 
-    test('create registers one webhook per selected event type, each with the n8n callback URL', async () => {
+    test('create registers exactly ONE webhook, whatever the event count', async () => {
         const ctx = hookContext();
         await methods.default.create.call(ctx);
-
-        assert.ok(ctx.requests.length > 0, 'no webhooks registered');
-        for (const req of ctx.requests) {
-            assert.strictEqual(req.method, 'POST');
-            assert.strictEqual(req.url, `${BASE}/webhook`);
-            assert.strictEqual(req.headers['x-api-key'], 'test-api-key');
-            const body = JSON.parse(req.body);
-            assert.strictEqual(body.url, 'https://n8n.test/webhook/abc');
-            assert.ok(body.event_type, 'event_type must be set on each registration');
-            assert.ok(body.webhook_name.startsWith('n8n - '), 'webhook_name should identify n8n as the owner');
-        }
-
-        const types = ctx.requests.map((r) => JSON.parse(r.body).event_type);
-        assert.strictEqual(new Set(types).size, types.length, 'each event type must register exactly once');
-        assert.deepStrictEqual(types.sort(), [...ALL_EVENTS].sort());
+        assert.strictEqual(ctx.requests.length, 1,
+            'the API takes all event types on one webhook — do not loop per type');
     });
 
-    test('only the selected event types are registered', async () => {
+    test('event types go in filter.event_type as an array', async () => {
         const ctx = hookContext({ events: ['OPT_OUT', 'LINK_HIT'] });
         await methods.default.create.call(ctx);
-        const types = ctx.requests.map((r) => JSON.parse(r.body).event_type);
-        assert.deepStrictEqual(types.sort(), ['LINK_HIT', 'OPT_OUT'],
-            'subscribing to two events must not register all seven');
+        const body = JSON.parse(ctx.requests[0].body);
+        assert.deepStrictEqual(body.filter, { event_type: ['OPT_OUT', 'LINK_HIT'] });
+        assert.strictEqual(body.url, 'https://n8n.test/webhook/abc');
+        assert.strictEqual(body.event_type, undefined,
+            'a top-level event_type is not part of the API');
     });
 
-    test('checkExists is false on a clean slate and true once an id is stored', async () => {
-        assert.strictEqual(await methods.default.checkExists.call(hookContext()), false);
-
-        const seeded = hookContext();
-        await methods.default.create.call(seeded);
-        assert.strictEqual(await methods.default.checkExists.call(seeded), true,
-            'after create, stored ids must make checkExists report true — otherwise n8n re-registers on every activation');
-    });
-
-    test('delete issues a DELETE per stored webhook id', async () => {
+    test('the label field is name, never webhook_name', async () => {
+        // 400 {"error":"invalid field in request: json: unknown field \"webhook_name\""}
         const ctx = hookContext();
         await methods.default.create.call(ctx);
-        const registered = ctx.requests.length;
+        const body = JSON.parse(ctx.requests[0].body);
+        assert.ok(body.name, 'name is required');
+        assert.strictEqual(body.webhook_name, undefined,
+            'webhook_name is rejected by the API as an unknown field');
+    });
 
+    test('it authenticates with x-api-key', async () => {
+        const ctx = hookContext();
+        await methods.default.create.call(ctx);
+        assert.strictEqual(ctx.requests[0].headers['x-api-key'], 'test-api-key');
+        assert.strictEqual(ctx.requests[0].headers.Authorization, undefined);
+    });
+
+    test('checkExists is false on a clean slate and true once registered', async () => {
+        const ctx = hookContext();
+        assert.strictEqual(await methods.default.checkExists.call(ctx), false);
+        await methods.default.create.call(ctx);
+        assert.strictEqual(await methods.default.checkExists.call(ctx), true,
+            'otherwise n8n re-registers on every activation and leaks webhooks');
+    });
+
+    test('delete removes the one stored webhook by id', async () => {
+        const ctx = hookContext();
+        await methods.default.create.call(ctx);
         ctx.requests.length = 0;
         await methods.default.delete.call(ctx);
+        assert.strictEqual(ctx.requests.length, 1);
+        assert.strictEqual(ctx.requests[0].method, 'DELETE');
+        assert.match(ctx.requests[0].url, /\/webhook\/wh_1$/);
+        assert.ok(!ctx.staticData.webhookId, 'the local record must be cleared');
+    });
 
-        assert.strictEqual(ctx.requests.length, registered, 'every registered webhook must be removed');
-        for (const req of ctx.requests) {
-            assert.strictEqual(req.method, 'DELETE');
-            assert.match(req.url, new RegExp(`^${BASE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/webhook/`));
-        }
+    test('delete survives the API being unreachable', async () => {
+        const ctx = hookContext();
+        await methods.default.create.call(ctx);
+        ctx.helpers.request = async () => { throw new Error('ECONNREFUSED'); };
+        await assert.doesNotReject(() => methods.default.delete.call(ctx),
+            'deactivating a workflow must not fail because Kudosity was down');
     });
 });
