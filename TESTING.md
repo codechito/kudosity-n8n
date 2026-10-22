@@ -186,11 +186,17 @@ restored afterwards. Use a number from step 3 that you know is unused.
 
 Then:
 
-1. Add a **Kudosity V1 Trigger**, set **Virtual Number** to the spare one
-2. Activate the workflow
-3. Text that number from your handset
-4. The workflow should fire, with `phone`, `message` and `raw` populated
+1. Add a **Kudosity V1 Trigger**, set **Virtual Number** to `61430251585`
+2. Activate the workflow — this writes the forward URL
+3. **Send from the other virtual number to it.** Add a Kudosity V1 node in a second
+   workflow: To `61430251585`, From `61426308477`, any message. Run it.
+   (A handset works too, but is not needed.)
+4. The trigger workflow should fire, with `phone`, `message` and `raw` populated
 5. Deactivate, and confirm **Clear Forward URL on Deactivate** blanked it
+
+Order matters: activate the trigger **before** sending. Inbound is forwarded, not
+stored — a message that arrives with no forward URL registered is not queued and
+cannot be replayed.
 
 **Record:** which field the inbound actually arrives in. The node reads `mobile`, `msisdn`
 and `from` for the sender, and `response` and `message` for the text, because v1 is
@@ -264,13 +270,15 @@ Verified against the sandbox account on 22 Oct 2026 with `scripts/live-check.js`
 
 ### Why the inbound half needs your server
 
-A real inbound cannot be produced on the sandbox account by sending between its two
-virtual numbers. Outbound routes to a fake Kannel gateway, so nothing is delivered and
-no reply is generated — tried, and no `direction: IN` message ever appeared.
+Inbound **is** reproducible on the sandbox account — send from one virtual number to the
+other and the receiving number treats it as inbound. What it needs is a **publicly
+reachable webhook**, because inbound is *forwarded, not stored*: with no forward URL
+registered there is nothing to observe, and the message does not appear in
+`GET /v2/sms` as `direction: IN` either. That is why an attempt from a laptop with no
+public endpoint saw nothing.
 
-Receiving therefore needs **a real handset texting the virtual number**, and a
-**publicly reachable webhook**. Your n8n server has the second; a phone has the first.
-That is why step 7 stays on the list despite everything else being settled.
+Your n8n server has a public URL. That is the only missing piece, and it is why step 7
+stays on the list while everything else is settled.
 
 ---
 
