@@ -16,6 +16,7 @@ export class KudosityV2Api implements ICredentialType {
 			type: 'string',
 			typeOptions: { password: true },
 			default: '',
+			required: true,
 			placeholder: 'Enter your Kudosity API Key',
 			description:
 				'Find your API key in your Kudosity account under <strong>Settings &gt; API</strong>.',

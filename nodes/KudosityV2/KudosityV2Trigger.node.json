@@ -1,0 +1,10 @@
+{
+	"node": "n8n-nodes-base.kudosityV2Trigger",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Communication"],
+	"resources": {
+		"credentialDocumentation": [{ "url": "https://developers.kudosity.com" }],
+		"primaryDocumentation": [{ "url": "https://developers.kudosity.com" }]
+	}
+}

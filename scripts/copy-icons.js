@@ -16,7 +16,10 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const SOURCES = ['nodes', 'credentials'];
+// .node.json files are node codexes — n8n reads them for panel categorisation
+// and documentation links, and logs "No codex available" without them.
 const ICON_EXT = new Set(['.svg', '.png']);
+const isCodex = (name) => name.endsWith('.node.json');
 
 function copyIcons(dir) {
     const abs = path.join(ROOT, dir);
@@ -27,7 +30,7 @@ function copyIcons(dir) {
         const rel = path.join(dir, entry.name);
         if (entry.isDirectory()) {
             copied += copyIcons(rel);
-        } else if (ICON_EXT.has(path.extname(entry.name).toLowerCase())) {
+        } else if (ICON_EXT.has(path.extname(entry.name).toLowerCase()) || isCodex(entry.name)) {
             const target = path.join(ROOT, 'dist', rel);
             fs.mkdirSync(path.dirname(target), { recursive: true });
             fs.copyFileSync(path.join(ROOT, rel), target);
@@ -39,7 +42,7 @@ function copyIcons(dir) {
 
 const total = SOURCES.reduce((n, dir) => n + copyIcons(dir), 0);
 if (total === 0) {
-    console.error('No icons found — n8n will render the node without one.');
+    console.error('No icons or codex files found — n8n will render the node without one.');
     process.exit(1);
 }
-console.log(`Copied ${total} icon${total === 1 ? '' : 's'} into dist/`);
+console.log(`Copied ${total} asset${total === 1 ? '' : 's'} (icons + codexes) into dist/`);
