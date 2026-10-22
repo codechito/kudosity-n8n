@@ -234,7 +234,11 @@ Verified against the sandbox account on 22 Oct 2026 with `scripts/live-check.js`
 - **V1 working:** Get Account, Get Numbers, Get Sender IDs, Format Number, Send SMS
   (default sender, named sender, country-code expansion), scheduled send, Cancel SMS,
   Get Delivery Status, Get Replies.
-- **V2 working:** Send SMS, with and without `message_ref`.
+- **V2 working:** Send SMS (with and without `message_ref`), Send MMS.
+- **V2 webhook registration.** **One** webhook carries every selected event type in a
+  `filter.event_type` array; the label field is `name`. A `webhook_name` field is
+  rejected outright. Both integrations had this wrong and registration had never
+  worked — now fixed and verified by registering and deleting a real webhook.
 - **V1 tolerates a blank sender** and falls back to the account default. **V2 rejects
   one** with 400 `{"error":"sender: required"}`.
 - **The V1 trigger's whole lifecycle** against the real API: `checkExists` false,
@@ -249,13 +253,14 @@ Verified against the sandbox account on 22 Oct 2026 with `scripts/live-check.js`
 
 ## Still to bring back
 
-1. **One webhook per event type, or one for everything?** (step 8) — changes both the
-   n8n package and the Make app
-2. **The raw v1 inbound payload** (step 7)
-3. **MMS, WhatsApp and RCS** (step 6). MMS needs a URL serving a real image
-   content-type. WhatsApp and RCS returned `invalid sender number` — the virtual
-   numbers are not provisioned for those channels, which is an account question
-4. **Whether a non-auth v1 error matches the auth shape**
+1. **The raw v1 inbound payload** (step 7)
+3. **WhatsApp and RCS** (step 6) returned `invalid sender number` / `invalid sender`.
+   The virtual numbers are not provisioned for those channels — an account question,
+   not a code one. MMS is done, but note the content URL must be one Kudosity can
+   actually fetch: Wikipedia is blocked, `w3.org` works.
+2. **Whether a non-auth v1 error matches the auth shape** — `FIELD_EMPTY` and
+   `FIELD_INVALID` both use the same `error.code` / `error.description` object, so this
+   is all but settled
 
 ### Why the inbound half needs your server
 
