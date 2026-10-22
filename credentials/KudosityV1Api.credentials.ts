@@ -6,13 +6,13 @@ import type { ICredentialType, INodeProperties } from 'n8n-workflow';
  * v1 authenticates with HTTP Basic over `key:secret`, which is what the Kudosity
  * Salesforce package sends and is proven in production.
  *
- * The secret is marked optional because v1 may accept the key alone — Basic auth
- * with an empty password is a common pattern — but that has not been verified
- * against the live API. Leave it blank to test; if authentication fails, fill it in.
- * Do not assume key-only works until a real request has returned 200.
+ * Both halves are required. The Kudosity Salesforce package and the Eloqua
+ * integrator have both sent key:secret against this API in production for a long
+ * time, and no evidence has been found that a key alone is accepted.
  *
- * Note this is a different scheme from v2, which sends the key raw in the
- * Authorization header with no Basic encoding and no secret.
+ * Note this is a different scheme entirely from v2, which needs no secret and sends
+ * its key in an x-api-key header. A v2 key does not authenticate here under any
+ * scheme tested, including x-api-key — the two APIs issue separate credentials.
  */
 export class KudosityV1Api implements ICredentialType {
 	name = 'kudosityV1Api';
@@ -37,8 +37,9 @@ export class KudosityV1Api implements ICredentialType {
 			type: 'string',
 			typeOptions: { password: true },
 			default: '',
+			required: true,
 			description:
-				'Your Kudosity API secret. Try leaving this blank first — v1 may accept the key alone. If requests come back 401, fill it in.',
+				'Your Kudosity API secret. v1 authenticates with Basic auth over key:secret, so both halves are needed.',
 		},
 	];
 }
