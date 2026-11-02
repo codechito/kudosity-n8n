@@ -207,3 +207,42 @@ describe('trigger webhook lifecycle', () => {
             'deactivating a workflow must not fail because Kudosity was down');
     });
 });
+
+describe('continueOnFail behaviour', () => {
+    // The live-check harness crashed here because it did not mock continueOnFail,
+    // which proved the path had no unit coverage. These pin both branches.
+    function failingContext(continueOnFail) {
+        return {
+            getInputData: () => [{ json: {} }],
+            getCredentials: async () => ({ apiKey: 'k' }),
+            getNodeParameter: (n, _i, f) => (n === 'operation' ? 'sendSms' : n in { recipient: 1, sender: 1, message: 1 } ? 'x' : f ?? ''),
+            getNode: () => ({ name: 'Kudosity V2', type: 't', typeVersion: 1, position: [0, 0], parameters: {} }),
+            continueOnFail: () => continueOnFail,
+            helpers: {
+                request: async () => {
+                    const e = new Error('HTTP 401');
+                    e.statusCode = 401;
+                    e.body = '{"status":"Invalid api key"}';
+                    throw e;
+                },
+            },
+        };
+    }
+
+    const { KudosityV2 } = require(require('path').join(__dirname, '..', 'dist/nodes/KudosityV2/KudosityV2.node.js'));
+
+    test('continueOnFail=false throws the translated error', async () => {
+        await assert.rejects(
+            () => KudosityV2.prototype.execute.call(failingContext(false)),
+            /Invalid api key/,
+            'a failing request must throw when continueOnFail is off',
+        );
+    });
+
+    test('continueOnFail=true passes the error through as an item', async () => {
+        const out = await KudosityV2.prototype.execute.call(failingContext(true));
+        const item = out[0][0].json;
+        assert.match(item.error, /Invalid api key/, 'the item carries the translated message');
+        assert.ok(item.description, 'and the actionable description');
+    });
+});

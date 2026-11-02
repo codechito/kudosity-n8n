@@ -90,6 +90,9 @@ function context(credentials, params) {
     return {
         sent,
         getInputData: () => [{ json: {} }],
+        // Real n8n supplies this; the harness defaults it to false so error paths
+        // surface the exception rather than swallowing it.
+        continueOnFail: () => false,
         getCredentials: async () => credentials,
         getNodeParameter: (name, _i, fallback) => (name in params ? params[name] : fallback ?? ''),
         getNode: () => ({ name: 'live-check' }),
