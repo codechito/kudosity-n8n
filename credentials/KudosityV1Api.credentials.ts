@@ -1,4 +1,10 @@
-import type { ICredentialType, INodeProperties } from 'n8n-workflow';
+import type {
+	IAuthenticateGeneric,
+	ICredentialTestRequest,
+	ICredentialType,
+	INodeProperties,
+} from 'n8n-workflow';
+import { trackingHeaders } from '../nodes/shared/tracking';
 
 /**
  * Credentials for the v1 API (api.transmitsms.com/*.json).
@@ -42,4 +48,33 @@ export class KudosityV1Api implements ICredentialType {
 				'Your Kudosity API secret. v1 authenticates with Basic auth over key:secret, so both halves are needed.',
 		},
 	];
+
+	/**
+	 * Used only by the credential test below. The V1 nodes build their own Basic
+	 * header, so this does not change how they authenticate.
+	 */
+	authenticate: IAuthenticateGeneric = {
+		type: 'generic',
+		properties: {
+			auth: {
+				username: '={{$credentials.apiKey}}',
+				password: '={{$credentials.apiSecret}}',
+			},
+		},
+	};
+
+	/**
+	 * Lets n8n's "Test connection" check the key and secret, and sends the
+	 * 'connect' action (SAL-94) — the install signal for V1 customers, who
+	 * otherwise never trigger one. get-client.json is read-only and is the same
+	 * call the Make app's V1 connection uses to validate.
+	 */
+	test: ICredentialTestRequest = {
+		request: {
+			baseURL: 'https://api.transmitsms.com',
+			url: '/get-client.json',
+			method: 'GET',
+			headers: trackingHeaders('connect'),
+		},
+	};
 }

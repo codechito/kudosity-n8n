@@ -6,6 +6,7 @@ import type {
 } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
 import { kudosityApiError } from '../shared/errors';
+import { KudosityAction, trackingHeaders } from '../shared/tracking';
 
 /**
  * The v1 API, as used in production by the Kudosity Salesforce package.
@@ -17,6 +18,19 @@ import { kudosityApiError } from '../shared/errors';
  * from the Salesforce package's working calls rather than from documentation.
  */
 const BASE_URL = 'https://api.transmitsms.com';
+
+/** The X-Kudosity-Action sent for each operation (SAL-94). */
+const ACTIONS: Record<string, KudosityAction> = {
+	sendSms: 'sms.send',
+	cancelSms: 'sms.cancel',
+	getDeliveryStatus: 'status.get',
+	formatNumber: 'number.format',
+	getSenderIds: 'senderids.get',
+	getAccount: 'account.get',
+	getNumbers: 'numbers.get',
+	getSmsResponses: 'replies.get',
+	setForwardUrl: 'number.forward',
+};
 
 export class KudosityV1 implements INodeType {
 	description: INodeTypeDescription = {
@@ -300,7 +314,7 @@ export class KudosityV1 implements INodeType {
 				const response = await this.helpers.request({
 					method,
 					url: method === 'GET' && query ? `${BASE_URL}${endpoint}?${query}` : `${BASE_URL}${endpoint}`,
-					headers,
+					headers: { ...headers, ...trackingHeaders(ACTIONS[operation]) },
 					...(method === 'POST' ? { body: query } : {}),
 				});
 

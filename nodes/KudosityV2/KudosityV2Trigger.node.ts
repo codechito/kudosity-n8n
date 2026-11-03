@@ -6,6 +6,7 @@ import {
 	INodeTypeDescription,
 	IWebhookResponseData,
 } from 'n8n-workflow';
+import { trackingHeaders } from '../shared/tracking';
 
 const BASE_URL = 'https://api.transmitmessage.com/v2';
 
@@ -89,6 +90,7 @@ export class KudosityV2Trigger implements INodeType {
 					headers: {
 						'x-api-key': credentials.apiKey as string,
 						'Content-Type': 'application/json',
+						...trackingHeaders('trigger.subscribe'),
 					},
 					body: JSON.stringify({
 						name: 'n8n',
@@ -114,7 +116,10 @@ export class KudosityV2Trigger implements INodeType {
 					await this.helpers.request({
 						method: 'DELETE',
 						url: `${BASE_URL}/webhook/${id}`,
-						headers: { 'x-api-key': credentials.apiKey as string },
+						headers: {
+							'x-api-key': credentials.apiKey as string,
+							...trackingHeaders('trigger.unsubscribe'),
+						},
 					});
 				} catch {
 					// Deactivation must not fail because the API was unreachable. The local

@@ -6,8 +6,17 @@ import {
 	NodeOperationError,
 } from 'n8n-workflow';
 import { kudosityApiError } from '../shared/errors';
+import { KudosityAction, trackingHeaders } from '../shared/tracking';
 
 const BASE_URL = 'https://api.transmitmessage.com/v2';
+
+/** The X-Kudosity-Action sent for each operation (SAL-94). */
+const ACTIONS: Record<string, KudosityAction> = {
+	sendSms: 'sms.send',
+	sendMms: 'mms.send',
+	sendWhatsapp: 'whatsapp.send',
+	sendRcs: 'rcs.send',
+};
 
 export class KudosityV2 implements INodeType {
 	description: INodeTypeDescription = {
@@ -377,7 +386,7 @@ export class KudosityV2 implements INodeType {
 				const response = await this.helpers.request({
 					method: 'POST',
 					url: `${BASE_URL}${endpoint}`,
-					headers,
+					headers: { ...headers, ...trackingHeaders(ACTIONS[operation]) },
 					body: JSON.stringify(body),
 				});
 

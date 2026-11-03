@@ -7,6 +7,7 @@ import type {
 	IWebhookResponseData,
 } from 'n8n-workflow';
 import { NodeOperationError } from 'n8n-workflow';
+import { trackingHeaders } from '../shared/tracking';
 
 const BASE_URL = 'https://api.transmitsms.com';
 
@@ -117,6 +118,7 @@ export class KudosityV1Trigger implements INodeType {
 					headers: {
 						Authorization: `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')}`,
 						Accept: 'application/json',
+						...trackingHeaders('trigger.subscribe'),
 					},
 				});
 
@@ -152,6 +154,7 @@ export class KudosityV1Trigger implements INodeType {
 						headers: {
 							Authorization: `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')}`,
 							Accept: 'application/json',
+							...trackingHeaders('trigger.unsubscribe'),
 						},
 					});
 				} catch {

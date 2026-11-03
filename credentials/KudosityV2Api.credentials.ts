@@ -4,6 +4,7 @@ import {
 	ICredentialType,
 	INodeProperties,
 } from 'n8n-workflow';
+import { trackingHeaders } from '../nodes/shared/tracking';
 
 export class KudosityV2Api implements ICredentialType {
 	name = 'kudosityV2Api';
@@ -37,6 +38,9 @@ export class KudosityV2Api implements ICredentialType {
 			baseURL: 'https://api.transmitmessage.com/v2',
 			url: '/sms?limit=1',
 			method: 'GET',
+			// 'connect' is the install signal: this fires when a customer first
+			// saves the credential. x-api-key is merged in by `authenticate`.
+			headers: trackingHeaders('connect'),
 		},
 	};
 }

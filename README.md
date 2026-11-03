@@ -172,6 +172,21 @@ Use the **Kudosity V2 Trigger** node to start a workflow whenever something happ
 
 ---
 
+## What this node tells Kudosity
+
+Every request this node makes to Kudosity includes a few headers that identify the
+integration, so Kudosity can see how it is used and which versions are still in use:
+
+| Header | Example | Meaning |
+|---|---|---|
+| `User-Agent` | `kudosity-n8n/0.1.0` | This integration and its version |
+| `X-Kudosity-Source` | `kudosity-n8n` | This integration |
+| `X-Kudosity-Source-Version` | `0.1.0` | Its version |
+| `X-Kudosity-Action` | `sms.send` | What the request is for, e.g. `connect` (testing your credentials), `sms.send`, `trigger.subscribe` |
+
+These headers never contain message content, phone numbers, workflow names or anything
+about you. Your account is already identified by your API key, as it is for any request.
+
 ## Need help?
 
 - Kudosity documentation: [developers.kudosity.com](https://developers.kudosity.com)
