@@ -22,6 +22,8 @@ const { KudosityV1Trigger } = dist('nodes/KudosityV1/KudosityV1Trigger.node.js')
 const { KudosityV2Trigger } = dist('nodes/KudosityV2/KudosityV2Trigger.node.js');
 const { KudosityV1Api } = dist('credentials/KudosityV1Api.credentials.js');
 const { KudosityV2Api } = dist('credentials/KudosityV2Api.credentials.js');
+const { Kudosity } = dist('nodes/Kudosity/Kudosity.node.js');
+const { KudosityApi } = dist('credentials/KudosityApi.credentials.js');
 const { SOURCE, VERSION } = dist('nodes/shared/tracking.js');
 const pkg = require(path.join(__dirname, '..', 'package.json'));
 
@@ -102,6 +104,7 @@ describe('V2 node', () => {
         sendMms: 'mms.send',
         sendWhatsapp: 'whatsapp.send',
         sendRcs: 'rcs.send',
+        listSms: 'sms.list',
     };
 
     test('every operation has an expected action', () => {
@@ -153,8 +156,21 @@ describe('triggers', () => {
     }
 });
 
+describe('legacy node (0.1.x compatibility)', () => {
+    test('every operation has an expected action', () => {
+        assert.deepStrictEqual(operationsOf(Kudosity).sort(), ['list', 'send']);
+    });
+    for (const [operation, action] of [['send', 'sms.send'], ['list', 'sms.list']]) {
+        test(`${operation} sends ${action}`, async () => {
+            const req = await run(Kudosity, { operation, message: 'Hi', sender: '61481074185', recipient: '61412345678' }, { apiKey: 'K', password: 'S' });
+            assertTracking(req.headers, action);
+            assert.strictEqual(req.headers['x-api-key'], 'K');
+        });
+    }
+});
+
 describe('credential tests send connect, the install signal', () => {
-    for (const [name, Cred] of [['V1', KudosityV1Api], ['V2', KudosityV2Api]]) {
+    for (const [name, Cred] of [['V1', KudosityV1Api], ['V2', KudosityV2Api], ['legacy', KudosityApi]]) {
         test(`${name} credential test`, () => {
             const cred = new Cred();
             assert.ok(cred.test, `${name} credential has no test request`);

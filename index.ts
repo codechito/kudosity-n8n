@@ -1,3 +1,5 @@
+export { Kudosity } from './nodes/Kudosity/Kudosity.node';
+export { KudosityApi } from './credentials/KudosityApi.credentials';
 export { KudosityV1 } from './nodes/KudosityV1/KudosityV1.node';
 export { KudosityV1Trigger } from './nodes/KudosityV1/KudosityV1Trigger.node';
 export { KudosityV1Api } from './credentials/KudosityV1Api.credentials';

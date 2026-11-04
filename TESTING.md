@@ -22,11 +22,18 @@ You need:
 
 ## 1. Install
 
-**Not** through Settings → Community nodes. That installer only accepts npm package names
-— it runs `npm install` against the npm registry — and this package is not published. It
-will not take a GitHub URL.
+> **Upgrading from 0.1.x?** 0.1.x (one node, "Kudosity") came from the earlier Burst SMS
+> repository. 0.2.0 keeps that node, hidden, so existing workflows keep working — update in
+> place (Settings → Community nodes → ⋮ → Update) rather than uninstalling.
 
-Use n8n's custom-extensions directory instead.
+### From npm — no shell access needed
+
+This package is published as **`n8n-nodes-kudosity`** (0.2.0 and later). In n8n: **Settings →
+Community nodes → Install**, enter `n8n-nodes-kudosity`, accept the risk prompt,
+install. Four nodes should appear (see **Verify** below).
+
+The installer only accepts npm package names — it will not take a GitHub URL. To test
+unpublished changes, use one of the shell-based routes below instead.
 
 ### Straight from GitHub — simplest
 
@@ -49,7 +56,7 @@ On this Mac:
 
 ```bash
 cd ~/Developer/kudosity/kudosity-n8n
-npm test            # builds, then runs 41 tests. Must be green before you ship it.
+npm test            # builds, then runs the test suite. Must be green before you ship it.
 npm pack            # → n8n-nodes-kudosity-0.1.0.tgz
 scp n8n-nodes-kudosity-0.1.0.tgz you@server:/tmp/
 ```
@@ -207,27 +214,16 @@ mapping to what is real.
 
 ## 8. The V2 trigger — the other open question
 
-**Does Kudosity register one webhook per event type, or send everything to one URL?**
+Settled on 22 Oct 2026: the node registers **one** webhook carrying every selected event type
+(`filter.event_type`), named `n8n`. What remains is seeing it fire end to end.
 
-The node assumes per-event-type, and so does the Make app. If that is wrong, both need the
-same change.
-
-1. Add a **Kudosity V2 Trigger**, select two event types only — say **SMS Inbound** and
-   **Opt Out**
+1. Add a **Kudosity V2 Trigger**, select **SMS Inbound** and **Opt Out**
 2. Activate
-3. In the Kudosity portal, look under **Settings → Webhooks**
+3. In the Kudosity portal, under **Settings → Webhooks**, expect **one** entry named `n8n`
+4. Send an inbound (from the other virtual number, as in step 7) and confirm the workflow fires
+5. Deactivate and confirm the webhook entry is removed
 
-**Expect:** two webhook entries named `n8n - SMS Inbound` and `n8n - Opt Out`.
-
-| What you see | Meaning |
-|---|---|
-| Two entries, one per type | The assumption holds. Nothing to change |
-| One entry | `event_type` is being ignored. Both integrations must drop the field and filter after the trigger instead |
-
-4. Send a real inbound and confirm the workflow fires
-5. Deactivate and confirm both webhook entries are removed
-
-**Record:** how many entries appeared, and their names.
+**Record:** the payload the trigger outputs, so the field mapping can be checked.
 
 ---
 

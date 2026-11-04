@@ -1,7 +1,7 @@
 {
   "name": "n8n-nodes-kudosity",
-  "version": "0.1.0",
-  "description": "n8n community node for Kudosity \u2014 send SMS, MMS, WhatsApp, and RCS messages via the TransmitMessage API",
+  "version": "0.2.0",
+  "description": "n8n community nodes for Kudosity: send SMS, MMS, WhatsApp and RCS, list SMS, and trigger workflows on inbound messages and events",
   "keywords": [
     "n8n-community-node-package",
     "kudosity",
@@ -36,10 +36,12 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
+      "dist/credentials/KudosityApi.credentials.js",
       "dist/credentials/KudosityV1Api.credentials.js",
       "dist/credentials/KudosityV2Api.credentials.js"
     ],
     "nodes": [
+      "dist/nodes/Kudosity/Kudosity.node.js",
       "dist/nodes/KudosityV1/KudosityV1.node.js",
       "dist/nodes/KudosityV1/KudosityV1Trigger.node.js",
       "dist/nodes/KudosityV2/KudosityV2.node.js",

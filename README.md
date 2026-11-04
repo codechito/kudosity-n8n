@@ -22,7 +22,7 @@ You will need:
 
 - An active **Kudosity account** with API access enabled
 - Your **Kudosity API Key** (see below)
-- An **n8n instance** (cloud or self-hosted) with this node installed
+- An **n8n instance** with this package installed: **Settings → Community nodes → Install**, enter `n8n-nodes-kudosity`. Already have 0.1.x installed? Use **Update** instead — see *Upgrading from 0.1.x* below.
 
 ---
 
@@ -125,6 +125,19 @@ Your credential is now saved and can be reused across all your Kudosity nodes.
 
 ---
 
+### List SMS
+
+1. Add a **Kudosity V2** node and set **Operation** to **List SMS**
+2. Set a **Limit**, or turn on **Return All** to fetch every matching message page by page
+3. Optionally add **Filters**: start and end date, sender, recipient, message reference, status,
+   direction (inbound or outbound) and order
+
+Each message is returned as its own item, ready for the next node.
+
+To shorten and track links in an outgoing SMS, turn on **Track Links** on **Send SMS**.
+
+---
+
 ## Step 4 — Receive events (Trigger node)
 
 Use the **Kudosity V2 Trigger** node to start a workflow whenever something happens in Kudosity.
@@ -186,6 +199,21 @@ integration, so Kudosity can see how it is used and which versions are still in 
 
 These headers never contain message content, phone numbers, workflow names or anything
 about you. Your account is already identified by your API key, as it is for any request.
+
+## Upgrading from 0.1.x
+
+Version 0.1.x had a single **Kudosity** node. 0.2.0 replaces it with the V1 and V2 nodes and
+triggers, and **keeps the old node** so your existing workflows keep running:
+
+1. In n8n, go to **Settings → Community nodes**, open the ⋮ menu on `n8n-nodes-kudosity` and choose
+   **Update**. Don't uninstall first — that removes the node your workflows use.
+2. Existing workflows and saved **Kudosity API** credentials work as before. The old node no longer
+   appears in the node panel and is marked deprecated.
+3. For new workflows, use **Kudosity V2**. It does everything the old node did — Send SMS (with Track
+   Links) and List SMS — plus MMS, WhatsApp, RCS and triggers.
+
+One improvement you may notice: **Return All** on the old node's List operation now returns every
+message, not just the first page.
 
 ## Need help?
 

@@ -1,4 +1,5 @@
 import {
+	IDataObject,
 	IExecuteFunctions,
 	INodeExecutionData,
 	INodeType,
@@ -7,6 +8,7 @@ import {
 } from 'n8n-workflow';
 import { kudosityApiError } from '../shared/errors';
 import { KudosityAction, trackingHeaders } from '../shared/tracking';
+import { listSms, STATUS_OPTIONS } from '../shared/listSms';
 
 const BASE_URL = 'https://api.transmitmessage.com/v2';
 
@@ -16,6 +18,7 @@ const ACTIONS: Record<string, KudosityAction> = {
 	sendMms: 'mms.send',
 	sendWhatsapp: 'whatsapp.send',
 	sendRcs: 'rcs.send',
+	listSms: 'sms.list',
 };
 
 export class KudosityV2 implements INodeType {
@@ -26,7 +29,7 @@ export class KudosityV2 implements INodeType {
 		group: ['output'],
 		version: 1,
 		subtitle: '={{$parameter["operation"]}}',
-		description: 'Send SMS, MMS, WhatsApp, and RCS messages via Kudosity',
+		description: 'Send SMS, MMS, WhatsApp, and RCS messages, and list SMS, via Kudosity',
 		defaults: {
 			name: 'Kudosity V2',
 		},
@@ -69,6 +72,12 @@ export class KudosityV2 implements INodeType {
 						value: 'sendRcs',
 						description: 'Send an RCS message (with optional SMS fallback)',
 						action: 'Send an RCS message',
+					},
+					{
+						name: 'List SMS',
+						value: 'listSms',
+						description: 'List sent and received SMS, with filters',
+						action: 'List SMS messages',
 					},
 				],
 				default: 'sendSms',
@@ -120,6 +129,73 @@ export class KudosityV2 implements INodeType {
 				default: '',
 				description:
 					'SMS body text. Messages over 160 characters will be split into multiple parts.',
+			},
+			{
+				displayName: 'Track Links',
+				name: 'trackLinks',
+				type: 'boolean',
+				displayOptions: {
+					show: { operation: ['sendSms'] },
+				},
+				default: false,
+				description: 'Whether Kudosity should shorten and track links in the message',
+			},
+
+			// ─── List SMS ─────────────────────────────────────────────────────────────
+			{
+				displayName: 'Return All',
+				name: 'returnAll',
+				type: 'boolean',
+				displayOptions: { show: { operation: ['listSms'] } },
+				default: false,
+				description: 'Whether to return all matching messages, fetching page by page, or only up to a limit',
+			},
+			{
+				displayName: 'Limit',
+				name: 'limit',
+				type: 'number',
+				displayOptions: { show: { operation: ['listSms'], returnAll: [false] } },
+				typeOptions: { minValue: 1, maxValue: 1000 },
+				default: 50,
+				description: 'Max number of messages to return',
+			},
+			{
+				displayName: 'Filters',
+				name: 'filters',
+				type: 'collection',
+				placeholder: 'Add Filter',
+				default: {},
+				displayOptions: { show: { operation: ['listSms'] } },
+				options: [
+					{ displayName: 'Start Date', name: 'start_date', type: 'dateTime', default: '', description: 'Only messages created at or after this time' },
+					{ displayName: 'End Date', name: 'end_date', type: 'dateTime', default: '', description: 'Only messages created at or before this time' },
+					{ displayName: 'Sender', name: 'sender', type: 'string', default: '', description: 'Filter by sender number or ID' },
+					{ displayName: 'Recipient', name: 'recipient', type: 'string', default: '', description: 'Filter by recipient number' },
+					{ displayName: 'Message Reference', name: 'message_ref', type: 'string', default: '', description: 'Filter by your message reference' },
+					{ displayName: 'Status', name: 'status', type: 'options', options: STATUS_OPTIONS, default: '', description: 'Filter by delivery status' },
+					{
+						displayName: 'Direction',
+						name: 'direction',
+						type: 'options',
+						options: [
+							{ name: 'Inbound (Received)', value: 'IN' },
+							{ name: 'Outbound (Sent)', value: 'OUT' },
+						],
+						default: '',
+						description: 'Filter by message direction',
+					},
+					{
+						displayName: 'Order',
+						name: 'order_by',
+						type: 'options',
+						options: [
+							{ name: 'Oldest First', value: 'CREATED_AT_ASC' },
+							{ name: 'Newest First', value: 'CREATED_AT_DESC' },
+						],
+						default: 'CREATED_AT_ASC',
+						description: 'Sort order by creation time',
+					},
+				],
 			},
 
 			// ─── MMS fields ───────────────────────────────────────────────────────────
@@ -287,6 +363,29 @@ export class KudosityV2 implements INodeType {
 
 		for (let i = 0; i < items.length; i++) {
 			const operation = this.getNodeParameter('operation', i) as string;
+
+			if (operation === 'listSms') {
+				try {
+					const result = await listSms(
+						this,
+						{ 'x-api-key': apiKey, Accept: 'application/json', ...trackingHeaders('sms.list') },
+						this.getNodeParameter('filters', i, {}) as IDataObject,
+						this.getNodeParameter('returnAll', i, false) as boolean,
+						this.getNodeParameter('limit', i, 50) as number,
+					);
+					// One output item per message, the n8n convention for list operations.
+					for (const sms of result.smses) returnData.push({ json: sms, pairedItem: { item: i } });
+				} catch (error) {
+					if (this.continueOnFail()) {
+						const translated = kudosityApiError(this.getNode(), error, 'v2');
+						returnData.push({ json: { error: translated.message, description: translated.description }, pairedItem: { item: i } });
+						continue;
+					}
+					throw kudosityApiError(this.getNode(), error, 'v2');
+				}
+				continue;
+			}
+
 			const recipient = this.getNodeParameter('recipient', i) as string;
 			const sender = this.getNodeParameter('sender', i) as string;
 			const messageRef = (this.getNodeParameter('messageRef', i) as string) || '';
@@ -296,12 +395,14 @@ export class KudosityV2 implements INodeType {
 
 			if (operation === 'sendSms') {
 				const message = this.getNodeParameter('message', i) as string;
+				const trackLinks = this.getNodeParameter('trackLinks', i, false) as boolean;
 				endpoint = '/sms';
 				body = {
 					sender,
 					recipient,
 					message,
 					...(messageRef && { message_ref: messageRef }),
+					...(trackLinks && { track_links: true }),
 				};
 			} else if (operation === 'sendMms') {
 				const mediaUrl = this.getNodeParameter('mediaUrl', i) as string;
