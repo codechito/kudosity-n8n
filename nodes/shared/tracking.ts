@@ -15,7 +15,7 @@
 export const SOURCE = 'kudosity-n8n';
 
 /** Must match package.json — test/headers.test.js enforces it. */
-export const VERSION = '0.2.0';
+export const VERSION = '0.2.1';
 
 /**
  * What a request is for. Shared vocabulary with the Make app, so reports can

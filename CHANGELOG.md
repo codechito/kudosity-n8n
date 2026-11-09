@@ -1,6 +1,15 @@
 # Changelog
 
-## 0.2.0 — unreleased
+## 0.2.1 — 9 Nov 2026
+
+### Security
+- **Kudosity V1 → Get Account** no longer outputs the account's API key and secret.
+  `get-client.json` returns them in its response, so they reached workflow data and execution
+  logs. They are now removed; every other field is unchanged, so existing workflows keep working.
+  If you ran Get Account on 0.2.0 or earlier, consider rotating that account's API secret.
+- The V1 credential test now calls `get-balance.json`, which does not echo the credentials.
+
+## 0.2.0 — 5 Nov 2026
 
 First release from this repository under the `n8n-nodes-kudosity` name. 0.1.x (one node,
 "Kudosity") came from the earlier Burst SMS repository; 0.2.0 replaces it and keeps it working.
