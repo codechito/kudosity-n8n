@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.1 — 9 Nov 2026
+## 0.2.1 — 9 Nov 2026 (SAL-121)
 
 ### Security
 - **Kudosity V1 → Get Account** no longer outputs the account's API key and secret.
