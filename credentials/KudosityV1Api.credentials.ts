@@ -66,13 +66,14 @@ export class KudosityV1Api implements ICredentialType {
 	/**
 	 * Lets n8n's "Test connection" check the key and secret, and sends the
 	 * 'connect' action (SAL-94) — the install signal for V1 customers, who
-	 * otherwise never trigger one. get-client.json is read-only and is the same
-	 * call the Make app's V1 connection uses to validate.
+	 * otherwise never trigger one. get-balance.json is read-only, documented, and
+	 * unlike get-client.json does not echo the key and secret back. The Make app's
+	 * V1 connection validates with the same call.
 	 */
 	test: ICredentialTestRequest = {
 		request: {
 			baseURL: 'https://api.transmitsms.com',
-			url: '/get-client.json',
+			url: '/get-balance.json',
 			method: 'GET',
 			headers: trackingHeaders('connect'),
 		},

@@ -17,6 +17,9 @@ import { KudosityAction, trackingHeaders } from '../shared/tracking';
  * Everything here is form-encoded, not JSON. Endpoints and field names are taken
  * from the Salesforce package's working calls rather than from documentation.
  */
+/** Fields in get-client.json that are credentials, removed from Get Account output. */
+const SECRET_FIELDS = ['apikey', 'apisecret', 'api_key', 'api_secret'];
+
 const BASE_URL = 'https://api.transmitsms.com';
 
 /** The X-Kudosity-Action sent for each operation (SAL-94). */
@@ -319,6 +322,11 @@ export class KudosityV1 implements INodeType {
 				});
 
 				const json = typeof response === 'string' ? JSON.parse(response) : response;
+				// get-client.json returns the account's own API key and secret. Never put
+				// them in workflow data, where execution logs and later nodes can see them.
+				if (operation === 'getAccount' && json && typeof json === 'object') {
+					for (const key of SECRET_FIELDS) delete (json as Record<string, unknown>)[key];
+				}
 				returnData.push({ json, pairedItem: { item: i } });
 			} catch (error) {
 				// continueOnFail lets a bad row pass through as an item rather than

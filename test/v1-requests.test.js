@@ -118,6 +118,15 @@ describe('v1 operations', () => {
         }
     });
 
+    test('Get Account never outputs the account API key or secret', async () => {
+        const ctx = execContext({ operation: 'getAccount' });
+        ctx.helpers.request = async () => ({ id: 1, name: 'Acme', balance: 5, apikey: 'k', apisecret: 's', error: { code: 'SUCCESS' } });
+        const [[item]] = await KudosityV1.prototype.execute.call(ctx);
+        assert.strictEqual(item.json.name, 'Acme');
+        assert.strictEqual(item.json.balance, 5);
+        assert.ok(!('apikey' in item.json) && !('apisecret' in item.json), JSON.stringify(item.json));
+    });
+
     test('Set Number Forward URL posts number and forward_url', async () => {
         const { req, form } = await call({
             operation: 'setForwardUrl', number: '61412345678', forwardUrl: 'https://n8n.test/webhook/abc',
