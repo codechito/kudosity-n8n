@@ -247,6 +247,34 @@ describe('v1 trigger', () => {
         assert.strictEqual(item.json.phone, '61400000000');
         assert.strictEqual(item.json.status, 'delivered');
     });
+
+    test('maps the exact inbound request Kudosity sends (GET, query string only)', async () => {
+        // Shape captured from a live inbound forward on 18 Nov 2026 (numbers replaced).
+        const ctx = {
+            getBodyData: () => ({}),
+            getQueryData: () => ({ user_id: '10000', rate: '10', mobile: '61400000000', response: 'this is a test',
+                message_id: '1740735129', response_id: '157266665', longcode: '61400000001',
+                datetime_entry: '2026-11-18 02:07:37', is_optout: 'no' }),
+            getNodeParameter: () => 'any',
+        };
+        const [[item]] = (await KudosityV1Trigger.prototype.webhook.call(ctx)).workflowData;
+        assert.deepStrictEqual(
+            { phone: item.json.phone, id: item.json.id, response_id: item.json.response_id, message: item.json.message,
+              status: item.json.status, opt_out: item.json.opt_out, to: item.json.to, received_at: item.json.received_at },
+            { phone: '61400000000', id: '1740735129', response_id: '157266665', message: 'this is a test',
+              status: 'received', opt_out: false, to: '61400000001', received_at: '2026-11-18 02:07:37' });
+    });
+
+    test('an opt-out reply is flagged', async () => {
+        const ctx = {
+            getBodyData: () => ({}),
+            getQueryData: () => ({ mobile: '61400000000', response: 'STOP', is_optout: 'yes' }),
+            getNodeParameter: () => 'any',
+        };
+        const [[item]] = (await KudosityV1Trigger.prototype.webhook.call(ctx)).workflowData;
+        assert.strictEqual(item.json.opt_out, true);
+        assert.strictEqual(item.json.status, 'opt-out');
+    });
 });
 
 describe('v1 endpoints that need more than the obvious parameter', () => {

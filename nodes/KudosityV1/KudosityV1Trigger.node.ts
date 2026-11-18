@@ -177,13 +177,20 @@ export class KudosityV1Trigger implements INodeType {
 		// when a field we did not anticipate turns out to matter.
 		const merged: IDataObject = { ...query, ...body };
 
+		// Kudosity forwards an inbound SMS as a GET with everything in the query string:
+		// mobile, response, message_id, response_id, longcode, datetime_entry, is_optout
+		// (captured from a live request, 18 Nov 2026). The time field is datetime_entry, not
+		// datetime, which left Received At empty before.
+		const optOut = String(merged.is_optout ?? '').toLowerCase() === 'yes';
 		const output: IDataObject = {
 			phone:       merged.mobile ?? merged.msisdn ?? merged.from ?? '',
 			id:          merged.message_id ?? merged.id ?? '',
+			response_id: merged.response_id ?? '',
 			message:     merged.response ?? merged.message ?? '',
-			status:      merged.status ?? '',
+			status:      merged.status ?? (optOut ? 'opt-out' : 'received'),
+			opt_out:     optOut,
 			to:          merged.to ?? merged.longcode ?? '',
-			received_at: merged.datetime ?? merged.received_at ?? '',
+			received_at: merged.datetime_entry ?? merged.datetime ?? merged.received_at ?? '',
 			raw:         merged,
 		};
 
