@@ -54,6 +54,12 @@ describe('error shapes seen in the wild', () => {
         assert.match(e.description, /not provisioned for WhatsApp or RCS/);
     });
 
+    test('v2 "Sender not found" (unregistered sender, seen live 20 Nov 2026) gets the sender advice', () => {
+        const e = translate('{"error":"Sender not found"}', 400, 'v2');
+        assert.match(e.message, /Sender not found/);
+        assert.match(e.description, /sender is not valid for this channel/);
+    });
+
     test('MMS content_url failure explains that Kudosity fetches the URL', () => {
         const e = translate('{"error":"Invalid content_url: https://x.test/a.png Content-Type: text/plain not supported"}', 400, 'v2');
         assert.match(e.description, /fetches this URL itself/,

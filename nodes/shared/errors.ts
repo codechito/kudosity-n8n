@@ -70,7 +70,7 @@ function advise(p: Parsed, status: number | undefined, apiVersion: 'v1' | 'v2'):
 			: 'The v2 API needs only the API key, sent as the x-api-key header. Check the key in the Kudosity V2 API credential, under Settings > API in your Kudosity account. Note the v1 secret is not used by v2.';
 	}
 
-	if (p.fields.includes('sender') || t.includes('invalid sender')) {
+	if (p.fields.includes('sender') || t.includes('invalid sender') || t.includes('sender not found')) {
 		return 'The sender is not valid for this channel. Run the Get Sender IDs operation on a Kudosity V1 node to see what this account may send as. A virtual number that works for SMS is often not provisioned for WhatsApp or RCS — that needs enabling on the account.';
 	}
 
