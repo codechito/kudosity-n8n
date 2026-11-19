@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.2 — 20 Nov 2026
 
 - V1 inbound trigger: **Received At** now reads `datetime_entry`, the field Kudosity actually sends (it was always empty). Adds **response_id** and **opt_out**, and **status** is `received` or `opt-out` when Kudosity sends none. Verified against a live inbound forward (GET, query string only).
 
